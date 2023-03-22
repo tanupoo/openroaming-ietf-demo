@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width,initial-scale=1">
+        <link rel="icon" href="data:,"> <!-- NOTE: Remove it for valid icon. -->
+
+        <title>OpenRoaming Demo UI</title>
+    </head>
+
+    <body>
+
+        <div>OpenRoaming Demo UI</div>
+
+        <hr>
+        <div id="div-ssid">
+        </div>
+
+        <hr>
+        <div id="div-sync">
+            <button id="get-ssid-status" onclick="click_get_ssid_status()">Sync</button>
+        </div>
+
+<style>
+
+#div-ssid {
+    border: 1px solid;
+    padding: 2px;
+}
+
+.ssid-status {
+    padding: 2px;
+}
+
+#get-ssid-status {
+    padding: 2px;
+    margin: 2px;
+    width: 100px;
+}
+
+/* Hide default HTML checkbox */
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+ /* The switch - the box around the slider */
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 42px;
+  height: 22px;
+  left: 4px;
+}
+
+/* The slider */
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #ccc;
+  -webkit-transition: .3s;
+  transition: .3s;
+}
+
+.cooldown {
+  position: relative;
+  display: inline-block;
+  left: 14px;
+}
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 20px;
+  width: 20px;
+  top: 1px;
+  left: 1px;
+  bottom: 1px;
+  background-color: white;
+  -webkit-transition: .3s;
+  transition: .3s;
+}
+
+input:checked + .slider {
+  background-color: #2196F3;
+}
+
+input:focus + .slider {
+  box-shadow: 0 0 1px #2196F3;
+}
+
+input:checked + .slider:before {
+  -webkit-transform: translateX(20px);
+  -ms-transform: translateX(20px);
+  transform: translateX(20px);
+}
+
+/* Rounded sliders */
+.slider.round {
+  border-radius: 24px;
+}
+
+.slider.round:before {
+  border-radius: 50%;
+} 
+
+</style>
+
+<script>
+
+const default_sync_cooldown_time = 10;
+const default_change_cooldown_time = 10;
+const debug_noharm = true;
+
+const ssid_list = __SSID_LIST__
+/*
+[
+    'Cafe-OR-DEMO',
+    'IETF-OR-DEMO',
+];
+*/
+
+//// DONT TOUCH BELOW
+
+const ssid_spec = {
+/*
+   // e.g.
+   'Cafe-OR-DEMO': {
+       'checkbox': elm_checkbox,
+       'cooldown': elm_cooldown,
+   }
+*/
+   };
+
+/*
+    <div class="ssid-status" id="div-ssid2">
+        <span id="ssid2-name">IETF-DEMO</span>
+        <label class="switch">
+            <input type="checkbox" id="ssid2-checkbox"
+                onchange="click_change_ssid_status('SSID_NAME')">
+            <span class="slider round"></span>
+        </label>
+        <span class="cooldown" id="ssid2-cooldown"></span>
+    </div>
+*/
+function make_ssid_list()
+{
+    let box = document.getElementById('div-ssid');
+    for (let i = 0; i < ssid_list.length; i++) {
+        let ssid_name = ssid_list[i];
+        let name = `ssid${i + 1}`;
+        let ssid_name_id = `${name}-name`;
+        let checkbox_id = `${name}-checkbox`;
+        let cooldown_id = `${name}-cooldown`;
+        let e0 = document.createElement('div');
+        let c;
+        e0.id = `div-${name}`;
+        e0.classList.add('ssid-status');
+        box.appendChild(e0);
+        ssid_spec[ssid_name] = {}
+        // ssid name
+        e1 = document.createElement('span');
+        e1.id = ssid_name_id;
+        e1.innerHTML = ssid_name;
+        e0.appendChild(e1);
+        // label switch
+        e1 = document.createElement('label');
+        e1.classList.add('switch');
+        e0.appendChild(e1);
+        // inut checkbox
+        e2 = document.createElement('input');
+        e2.id = checkbox_id;
+        e2.type = 'checkbox';
+        e2.addEventListener('click', () => click_change_ssid_status(ssid_name));
+        ssid_spec[ssid_name].checkbox = e2;
+        e1.appendChild(e2);
+        // slider
+        e2 = document.createElement('span');
+        e2.classList.add('slider');
+        e2.classList.add('round');
+        e1.appendChild(e2);
+        // cooldown
+        e1 = document.createElement('span');
+        e1.id = cooldown_id;
+        e1.classList.add('cooldown');
+        ssid_spec[ssid_name].cooldown = e1;
+        e0.appendChild(e1);
+    }
+    console.log('ssid_spec=', ssid_spec);
+}
+
+function cooldown(cooldown_time, elm_input, elm_input_text, elm_time)
+{
+    setTimeout(function() {
+        cooldown_time -= 1;
+        if (cooldown_time <= 0) {
+            elm_input.disabled = false;
+            if (elm_input_text !== undefined) {
+                elm_input.innerText = elm_input_text;
+            }
+            if (elm_time !== undefined) {
+                elm_time.innerText = '';
+            }
+        } else {
+            elm_input.disabled = true;
+            if (elm_input_text !== undefined) {
+                elm_input.innerText = `Cooldown: ${cooldown_time}`;
+            }
+            if (elm_time !== undefined) {
+                elm_time.innerText = `Cooldown: ${cooldown_time}`;
+            }
+            cooldown(cooldown_time, elm_input, elm_input_text, elm_time);
+        }
+    }, 1000);
+}
+
+function set_ssid_status(status_list)
+{
+    Object.entries(status_list).map(x => {
+        let ssid_name = x[0];
+        let spec = ssid_spec[ssid_name]
+        if (x[1].status == 'up') {
+            spec.checkbox.checked = true;
+        } else if (x[1].status == 'down') {
+            spec.checkbox.checked = false;
+        }
+    });
+}
+
+/*
+curl -X PUT http://localhost:48001/v1/status/Cafe-OR-DEMO?enabled=false
+{
+    "response": {
+        "Cafe-OR-DEMO": { "status": "down" }
+    }
+}
+*/
+
+const change_ssid_status = async function(ssid, status) {
+    if (debug_noharm) {
+            let ret = {'response':{}}
+            ret.response[ssid] = {'status': !status?'up':'down' }
+    }
+
+    let url = `http://__BASE_NAME__/v1/status/${ssid}?enabled=${status}`;
+    const result = await fetch(url, { method: 'PUT', })
+        .then(response => response.json())
+        .catch((error) => {
+            /* XXX do something for updating error */
+            return { code: -1 }
+        })
+    return result;
+}
+
+const click_change_ssid_status = async function(ssid_name)
+{
+    let spec = ssid_spec[ssid_name];
+
+    cooldown(default_sync_cooldown_time, spec.checkbox, undefined, spec.cooldown);
+    result = await change_ssid_status(ssid_name, spec.checkbox.checked);
+    console.log(`SSID status: ${JSON.stringify(result)}`);
+    set_ssid_status(result.response);
+}
+
+/*
+curl -X GET http://localhost:48001/v1/status
+{
+    "response": {
+        "Cafe-OR-DEMO": {"status":"up"},
+        "IETF-OR-DEMO":{"status":"down"}
+    }
+}
+*/
+
+const get_ssid_status = async function()
+{
+    if (debug_noharm) {
+        return {'response':{'Cafe-OR-DEMO':{'status':'up'},'IETF-OR-DEMO':{'status':'down'}}}
+    }
+
+    let url = 'http://__BASE_NAME__/v1/status';
+    const result = await fetch(url, { method: 'GET', })
+        .then(response => response.json())
+        .catch((error) => {
+            /* XXX do something for updating error */
+            return { code: -1 }
+        })
+    return result;
+}
+
+const click_get_ssid_status = async function(cooldown_time)
+{
+    if (cooldown_time === undefined) {
+        cooldown_time = default_change_cooldown_time;
+    }
+    elm_input = document.getElementById('get-ssid-status');
+    cooldown(cooldown_time, elm_input, 'Sync', undefined);
+    result = await get_ssid_status();
+    console.log(`SSID status: ${JSON.stringify(result)}`);
+    set_ssid_status(result.response);
+}
+
+// init
+make_ssid_list();
+if (!debug_noharm) {
+    click_get_ssid_status(5);
+}
+
+</script>
+
+    </body>
+
+</html>
+
