@@ -11,9 +11,10 @@
 
     <body>
 
-        <div>OpenRoaming Demo UI</div>
+        <div id="title">OpenRoaming Demo UI</div>
 
         <hr>
+        <div>SSID list</div>
         <div id="div-ssid">
         </div>
 
@@ -24,6 +25,12 @@
 
 <style>
 
+#title {
+    font-family: cursive;
+    font-size: 25px;
+    font-weight: bold;
+}
+
 #div-ssid {
     border: 1px solid;
     padding: 2px;
@@ -31,11 +38,17 @@
 
 .ssid-status {
     padding: 2px;
+    margin: 5px;
+}
+
+.ssid-name {
+    font-family: fantasy;
+    font-size: 20px;
 }
 
 #get-ssid-status {
     padding: 2px;
-    margin: 2px;
+    margin: 5px;
     width: 100px;
 }
 
@@ -50,8 +63,8 @@
 .switch {
   position: relative;
   display: inline-block;
-  width: 42px;
-  height: 22px;
+  width: 38px;
+  height: 20px;
   left: 4px;
 }
 
@@ -69,6 +82,7 @@
 }
 
 .cooldown {
+    font-size: 12px;
   position: relative;
   display: inline-block;
   left: 14px;
@@ -77,8 +91,8 @@
 .slider:before {
   position: absolute;
   content: "";
-  height: 20px;
-  width: 20px;
+  height: 18px;
+  width: 18px;
   top: 1px;
   left: 1px;
   bottom: 1px;
@@ -96,9 +110,9 @@ input:focus + .slider {
 }
 
 input:checked + .slider:before {
-  -webkit-transform: translateX(20px);
-  -ms-transform: translateX(20px);
-  transform: translateX(20px);
+  -webkit-transform: translateX(18px);
+  -ms-transform: translateX(18px);
+  transform: translateX(18px);
 }
 
 /* Rounded sliders */
@@ -116,7 +130,7 @@ input:checked + .slider:before {
 
 const default_sync_cooldown_time = 10;
 const default_change_cooldown_time = 10;
-const debug_noharm = true;
+const debug_noharm = false;
 
 const ssid_list = __SSID_LIST__
 /*
@@ -128,6 +142,7 @@ const ssid_list = __SSID_LIST__
 
 //// DONT TOUCH BELOW
 
+const elm_get_ssid_status = document.getElementById('get-ssid-status');
 const ssid_spec = {
 /*
    // e.g.
@@ -140,7 +155,7 @@ const ssid_spec = {
 
 /*
     <div class="ssid-status" id="div-ssid2">
-        <span id="ssid2-name">IETF-DEMO</span>
+        <span class="ssid-name">IETF-DEMO</span>
         <label class="switch">
             <input type="checkbox" id="ssid2-checkbox"
                 onchange="click_change_ssid_status('SSID_NAME')">
@@ -155,7 +170,6 @@ function make_ssid_list()
     for (let i = 0; i < ssid_list.length; i++) {
         let ssid_name = ssid_list[i];
         let name = `ssid${i + 1}`;
-        let ssid_name_id = `${name}-name`;
         let checkbox_id = `${name}-checkbox`;
         let cooldown_id = `${name}-cooldown`;
         let e0 = document.createElement('div');
@@ -166,8 +180,8 @@ function make_ssid_list()
         ssid_spec[ssid_name] = {}
         // ssid name
         e1 = document.createElement('span');
-        e1.id = ssid_name_id;
-        e1.innerHTML = ssid_name;
+        e1.classList.add('ssid-name');
+        e1.innerText = ssid_name;
         e0.appendChild(e1);
         // label switch
         e1 = document.createElement('label');
@@ -210,10 +224,10 @@ function cooldown(cooldown_time, elm_input, elm_input_text, elm_time)
         } else {
             elm_input.disabled = true;
             if (elm_input_text !== undefined) {
-                elm_input.innerText = `Cooldown: ${cooldown_time}`;
+                elm_input.innerHTML = `<b>Locked</b>: ${cooldown_time}`;
             }
             if (elm_time !== undefined) {
-                elm_time.innerText = `Cooldown: ${cooldown_time}`;
+               elm_time.innerHTML = `<b>Locked</b>: ${cooldown_time}`;
             }
             cooldown(cooldown_time, elm_input, elm_input_text, elm_time);
         }
@@ -263,6 +277,8 @@ const click_change_ssid_status = async function(ssid_name)
     let spec = ssid_spec[ssid_name];
 
     cooldown(default_sync_cooldown_time, spec.checkbox, undefined, spec.cooldown);
+    /* lock sync button */
+    cooldown(default_change_cooldown_time, elm_get_ssid_status, 'Sync', undefined);
     result = await change_ssid_status(ssid_name, spec.checkbox.checked);
     console.log(`SSID status: ${JSON.stringify(result)}`);
     set_ssid_status(result.response);
@@ -299,8 +315,13 @@ const click_get_ssid_status = async function(cooldown_time)
     if (cooldown_time === undefined) {
         cooldown_time = default_change_cooldown_time;
     }
-    elm_input = document.getElementById('get-ssid-status');
-    cooldown(cooldown_time, elm_input, 'Sync', undefined);
+    cooldown(cooldown_time, elm_get_ssid_status, 'Sync', undefined);
+    /* lock each ssid button */
+    Object.entries(ssid_spec).map(x => {
+        let ssid_name = x[0];
+        let spec = x[1];
+        cooldown(default_sync_cooldown_time, spec.checkbox, undefined, spec.cooldown);
+        })
     result = await get_ssid_status();
     console.log(`SSID status: ${JSON.stringify(result)}`);
     set_ssid_status(result.response);

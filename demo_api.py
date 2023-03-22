@@ -74,7 +74,9 @@ def api(config):
         html_content = None
         async with aiofile.async_open(f"{config.ui_path}/index.html", "r") as fd:
             html_content = await fd.read()
-        return html_content.replace("__BASE_NAME__", server_basename)
+        ssid_list_js = str([x.ssid_name for x in ssid_list])
+        return html_content.replace("__BASE_NAME__",
+                                    server_basename).replace("__SSID_LIST__", ssid_list_js)
 
 
     @app.get("/v1/status")
