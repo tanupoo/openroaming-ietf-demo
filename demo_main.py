@@ -28,6 +28,7 @@ if __name__ == "__main__":
 else:
     loop = asyncio.get_event_loop()
     config = set_config(loop)
+    config.loop = loop
     log_start(config)
     app = api(config)
 
