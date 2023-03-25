@@ -23,7 +23,9 @@ def api(config):
     else:
         server_basename = config.server_basename
 
-    meraki = meraki_asyncio_api(config.loop)
+    meraki = meraki_asyncio_api(config.loop,
+                                logger=config.logger,
+                                debug=config.enable_debug)
     meraki.set_apikey(config_api_key_spec=config.api_key_spec)
 
     fastapi_kwargs = {}
@@ -44,13 +46,15 @@ def api(config):
             status = result.get("enabled")
             if status == True:
                 obj[ssid_name] = { "status": "up" }
+                logger.info(f"set_ssid_status(), {ssid_name} is up.")
             elif status == False:
                 obj[ssid_name] = { "status": "down" }
+                logger.info(f"set_ssid_status(), {ssid_name} is down.")
             else:
                 obj[ssid_name] = { "status": "unknown" }
                 logger.error(f"set_ssid_status: status=unknown")
         else:
-            logger.error(f"set_ssid_status(), {None}")
+            logger.error(f"set_ssid_status(), {result}")
 
 
     @app.exception_handler(RequestValidationError)
