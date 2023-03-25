@@ -90,8 +90,7 @@ def api(config):
         resp = {}
         x = resp.setdefault("response", {})
         for v in ssid_list:
-            result = await meraki.async_get_ssid(v.network_id, v.ssid_number,
-                                                 debug=config.enable_debug)
+            result = await meraki.async_get_ssid(v.network_id, v.ssid_number)
             set_ssid_status(x, v.ssid_name, result)
         if x:
             return resp
@@ -111,8 +110,7 @@ def api(config):
         x = resp.setdefault("response", {})
         v = get_ssid_spec(ssid_name)
         if v:
-            result = await meraki.async_get_ssid(v.network_id, v.ssid_number,
-                                                 debug=config.enable_debug)
+            result = await meraki.async_get_ssid(v.network_id, v.ssid_number)
             set_ssid_status(x, v.ssid_name, result)
             return resp
         else:
@@ -137,8 +135,7 @@ def api(config):
         x = resp.setdefault("response", {})
         v = get_ssid_spec(ssid_name)
         if v:
-            result = await meraki.async_put_ssid(v.network_id, v.ssid_number, data,
-                                                 debug=config.enable_debug)
+            result = await meraki.async_put_ssid(v.network_id, v.ssid_number, data)
             set_ssid_status(x, v.ssid_name, result)
             return resp
         else:
