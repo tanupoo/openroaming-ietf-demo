@@ -8,7 +8,7 @@ from fastapi.responses import JSONResponse, HTMLResponse
 from fastapi.encoders import jsonable_encoder
 from pydantic import Required
 from typing import Annotated
-from meraki.meraki_api import meraki_put_ssid, meraki_get_ssid, meraki_set_apikey
+from meraki.meraki_asyncio_api import meraki_asyncio_api
 import json
 
 def api(config):
@@ -23,7 +23,8 @@ def api(config):
     else:
         server_basename = config.server_basename
 
-    meraki_set_apikey(config_api_key_spec=config.api_key_spec)
+    meraki = meraki_asyncio_api(config.loop)
+    meraki.set_apikey(config_api_key_spec=config.api_key_spec)
 
     fastapi_kwargs = {}
     #fastapi_kwargs = dict(docs_url=None, redoc_url=None, openapi_url=None)
@@ -49,7 +50,7 @@ def api(config):
                 obj[ssid_name] = { "status": "unknown" }
                 logger.error(f"set_ssid_status: status=unknown")
         else:
-            logger.error(f"meraki_get_ssid(), {None}")
+            logger.error(f"set_ssid_status(), {None}")
 
 
     @app.exception_handler(RequestValidationError)
@@ -85,7 +86,8 @@ def api(config):
         resp = {}
         x = resp.setdefault("response", {})
         for v in ssid_list:
-            result = meraki_get_ssid(v.network_id, v.ssid_number)
+            result = await meraki.async_get_ssid(v.network_id, v.ssid_number,
+                                                 debug=config.enable_debug)
             set_ssid_status(x, v.ssid_name, result)
         if x:
             return resp
@@ -105,7 +107,8 @@ def api(config):
         x = resp.setdefault("response", {})
         v = get_ssid_spec(ssid_name)
         if v:
-            result = meraki_get_ssid(v.network_id, v.ssid_number)
+            result = await meraki.async_get_ssid(v.network_id, v.ssid_number,
+                                                 debug=config.enable_debug)
             set_ssid_status(x, v.ssid_name, result)
             return resp
         else:
@@ -130,7 +133,8 @@ def api(config):
         x = resp.setdefault("response", {})
         v = get_ssid_spec(ssid_name)
         if v:
-            result = meraki_put_ssid(v.network_id, v.ssid_number, data)
+            result = await meraki.async_put_ssid(v.network_id, v.ssid_number, data,
+                                                 debug=config.enable_debug)
             set_ssid_status(x, v.ssid_name, result)
             return resp
         else:
