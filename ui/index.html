@@ -14,13 +14,13 @@
         <div id="title">OpenRoaming Demo UI</div>
 
         <hr>
-        <div>SSID list</div>
+        <div class="h4">SSID list</div>
         <div id="div-ssid">
         </div>
 
         <hr>
         <div id="div-sync">
-            <button id="get-ssid-status" onclick="click_get_ssid_status()">Sync</button>
+            <button id="ssid-sync" onclick="click_get_ssid_status()">Sync</button>
         </div>
 
 <style>
@@ -29,6 +29,11 @@
     font-family: cursive;
     font-size: 25px;
     font-weight: bold;
+    margin-bottom: 5px;
+}
+
+.h4 {
+    font-size: 12px;
 }
 
 #div-ssid {
@@ -38,17 +43,17 @@
 
 .ssid-status {
     padding: 2px;
-    margin: 5px;
+    margin: 7px;
 }
 
 .ssid-name {
     font-family: fantasy;
-    font-size: 20px;
+    font-size: 24px;
 }
 
-#get-ssid-status {
+#ssid-sync {
     padding: 2px;
-    margin: 5px;
+    margin: 7px;
     width: 100px;
 }
 
@@ -130,7 +135,7 @@ input:checked + .slider:before {
 
 const default_sync_cooldown_time = 30;
 const default_change_cooldown_time = 30;
-const debug_noharm = false;
+const debug_noharm = true;
 
 const ssid_list = __SSID_LIST__
 /*
